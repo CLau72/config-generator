@@ -1,0 +1,537 @@
+service nagle
+no service pad
+service tcp-keepalives-in
+service tcp-keepalives-out
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+service unsupported-transceiver
+!
+hostname ${Hostname}
+!
+boot-start-marker
+boot-end-marker
+!
+logging buffered 16384
+no logging console
+!
+username admin privilege 15 algorithm-type md5 secret SA307
+no aaa new-model
+platform config-upgrade 15.2(6)E
+system mtu routing 1500
+no ip source-route
+ip dhcp use subscriber-id client-id
+ip dhcp subscriber-id interface-name
+!
+ip dhcp pool User_PCs
+ network 192.168.1.0 255.255.255.0
+ default-router 192.168.1.1
+ lease infinite
+ reserved-only
+   address 192.168.1.108 client-id "Fa1/7" ascii
+   address 192.168.1.109 client-id "Fa1/8" ascii
+   address 192.168.1.211 client-id "Fa1/11" ascii
+   address 192.168.1.212 client-id "Fa1/12" ascii
+   cip instance 1
+!
+!
+ip dhcp snooping vlan ${VLAN}
+no ip domain-lookup
+ip device tracking probe auto-source fallback 169.254.1.100 0.0.0.0 override
+ip device tracking probe delay 15
+ip igmp snooping querier
+vtp mode transparent
+no profinet
+!
+!
+!
+!
+!
+udld aggressive
+
+ptp mode e2etransparent
+!
+dlr ring 1
+ mode supervisor
+  precedence 255
+
+
+dlr ring 1
+ ring-dhcp
+  snooping enable
+!
+spanning-tree mode rapid-pvst
+spanning-tree portfast edge bpduguard default
+spanning-tree portfast edge bpdufilter default
+spanning-tree extend system-id
+errdisable recovery cause udld
+errdisable recovery cause bpduguard
+errdisable recovery cause security-violation
+errdisable recovery cause channel-misconfig
+errdisable recovery cause pagp-flap
+errdisable recovery cause dtp-flap
+errdisable recovery cause link-flap
+errdisable recovery cause sfp-config-mismatch
+errdisable recovery cause gbic-invalid
+errdisable recovery cause psecure-violation
+errdisable recovery cause port-mode-failure
+errdisable recovery cause dhcp-rate-limit
+errdisable recovery cause pppoe-ia-rate-limit
+errdisable recovery cause mac-limit
+errdisable recovery cause vmps
+errdisable recovery cause storm-control
+errdisable recovery cause inline-power
+errdisable recovery cause arp-inspection
+errdisable recovery cause loopback
+errdisable recovery cause small-frame
+errdisable recovery cause psp
+errdisable recovery cause loopdetect
+errdisable recovery cause mrp-miscabling
+errdisable recovery interval 30
+!
+alarm profile defaultPort
+ alarm not-operating
+ syslog not-operating
+ notifies not-operating
+!
+alarm profile ab-alarm
+ alarm link-fault not-forwarding fcs-error
+ syslog link-fault not-forwarding fcs-error
+ notifies link-fault not-forwarding fcs-error
+ relay-major not-forwarding
+!
+alarm facility power-supply rps notifies
+alarm facility power-supply rps relay major
+alarm facility temperature secondary notifies
+alarm facility temperature secondary syslog
+alarm facility temperature secondary high 90
+alarm facility temperature secondary low 0
+!
+!
+vlan ${VLAN}
+ name ${Hostname}
+!
+vlan 223
+ name TRUNK
+!
+!
+class-map match-all 1588-PTP-General
+ match access-group 107
+class-map match-all 1588-PTP-Event
+ match access-group 106
+class-map match-all CIP-Implicit_dscp_any
+ match access-group 104
+class-map match-all CIP-Other
+ match access-group 105
+class-map match-all voip-data
+ match ip dscp ef
+class-map match-all voip-control
+ match ip dscp cs3  af31
+class-map match-all CIP-Implicit_dscp_43
+ match access-group 103
+class-map match-all CIP-Implicit_dscp_55
+ match access-group 101
+class-map match-all CIP-Implicit_dscp_47
+ match access-group 102
+!
+policy-map Voice-Map
+ class voip-data
+  set dscp ef
+  police 320000 8000 exceed-action policed-dscp-transmit
+ class voip-control
+  set dscp cs3
+  police 32000 8000 exceed-action policed-dscp-transmit
+policy-map CIP-PTP-Traffic
+ class CIP-Implicit_dscp_55
+  set ip dscp 55
+ class CIP-Implicit_dscp_47
+  set ip dscp 47
+ class CIP-Implicit_dscp_43
+  set ip dscp 43
+ class CIP-Implicit_dscp_any
+  set ip dscp 31
+ class CIP-Other
+  set ip dscp 27
+ class 1588-PTP-Event
+  set ip dscp 59
+ class 1588-PTP-General
+  set ip dscp 47
+!
+!
+l2nat instance SA307
+ instance-id 1
+ fixup all
+ inside from host 192.168.1.100 to ${NATPrefix}.100
+ outside from host ${NATPrefix}.1 to 192.168.1.1 gateway
+ inside from host 192.168.1.101 to ${NATPrefix}.101
+ inside from host 192.168.1.102 to ${NATPrefix}.102
+ inside from host 192.168.1.103 to ${NATPrefix}.103
+ inside from host 192.168.1.104 to ${NATPrefix}.104
+ inside from host 192.168.1.105 to ${NATPrefix}.105
+ inside from host 192.168.1.106 to ${NATPrefix}.106
+ inside from host 192.168.1.107 to ${NATPrefix}.107
+ inside from host 192.168.1.209 to ${NATPrefix}.209
+ inside from host 192.168.1.210 to ${NATPrefix}.210
+ inside from host 192.168.1.211 to ${NATPrefix}.211
+ inside from host 192.168.1.212 to ${NATPrefix}.212
+ inside from host 192.168.1.215 to ${NATPrefix}.215
+ inside from host 192.168.1.216 to ${NATPrefix}.216
+ inside from host 192.168.1.217 to ${NATPrefix}.217
+ inside from host 192.168.1.218 to ${NATPrefix}.218
+ inside from host 192.168.1.219 to ${NATPrefix}.219
+ inside from host 192.168.1.220 to ${NATPrefix}.220
+ inside from host 192.168.1.221 to ${NATPrefix}.221
+!
+!
+!
+macro global description ab-global
+!
+interface FastEthernet1/1
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ load-interval 30
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no cdp enable
+ macro description ab-ethernetip
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/2
+ switchport access vlan ${VLAN}
+ switchport mode access
+ no ptp enable
+ load-interval 30
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no cdp enable
+ mls qos trust dscp
+ macro description ab-multiport-device
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/3
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security aging time 2
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ macro description vm-desktop-automation
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/4
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ load-interval 30
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no cdp enable
+ macro description ab-ethernetip
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/5
+ switchport access vlan ${VLAN}
+ switchport mode access
+ load-interval 30
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no cdp enable
+ mls qos trust dscpc
+ macro description ab-multiport-device
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/6
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security aging type inactivity
+ switchport port-security
+ load-interval 30
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no cdp enable
+ macro description ab-ethernetip
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/7
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security aging time 2
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ ip dhcp relay information option server-id-override
+ ip dhcp server use subscriber-id client-id
+ macro description vm-desktop-automation
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/8
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security aging time 2
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ ip dhcp relay information option server-id-override
+ ip dhcp server use subscriber-id client-id
+ macro description vm-desktop-automation
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/9
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ load-interval 30
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no cdp enable
+ macro description ab-ethernetip
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/10
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ load-interval 30
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no cdp enable
+ macro description ab-ethernetip
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/11
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ load-interval 30
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no cdp enable
+ macro description ab-ethernetip
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/12
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ load-interval 30
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no cdp enable
+ macro description ab-ethernetip
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/13
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security aging time 2
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ macro description vm-desktop-automation
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/14
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security aging time 2
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ macro description vm-desktop-automation
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+ service-policy input CIP-PTP-Traffic
+!
+interface FastEthernet1/15
+ switchport access vlan ${VLAN}
+ switchport mode access
+ no ptp enable
+ load-interval 30
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no cdp enable
+ dlr ring 1
+ mls qos trust dscp
+ macro description ab-multiport-device
+ alarm profile ab-alarm
+ service-policy input CIP-PTP-Traffic
+ ip dhcp snooping trust
+!
+interface FastEthernet1/16
+ switchport access vlan ${VLAN}
+ switchport mode access
+ no ptp enable
+ load-interval 30
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no cdp enable
+ dlr ring 1
+ mls qos trust dscp
+ macro description ab-multiport-device
+ alarm profile ab-alarm
+ service-policy input CIP-PTP-Traffic
+ ip dhcp snooping trust
+!
+interface FastEthernet1/17
+ switchport access vlan ${VLAN}
+ switchport mode access
+ no ptp enable
+!
+interface FastEthernet1/18
+ switchport access vlan ${VLAN}
+ switchport mode access
+ no ptp enable
+!
+interface GigabitEthernet1/1
+ switchport access vlan ${VLAN}
+ switchport mode access
+ switchport port-security maximum 2
+ switchport port-security aging time 2
+ switchport port-security aging type inactivity
+ switchport port-security
+ no ptp enable
+ macro description vm-desktop-automation
+ alarm profile ab-alarm
+ spanning-tree portfast edge
+ spanning-tree bpduguard enable
+ service-policy input CIP-PTP-Traffic
+!
+interface GigabitEthernet1/2
+ switchport trunk native vlan 223
+ switchport mode trunk
+ srr-queue bandwidth share 1 19 40 40
+ priority-queue out
+ no ptp enable
+ mls qos trust cos
+ macro description switch-automation
+ l2nat SA307
+ l2nat SA307 ${VLAN}
+ alarm profile ab-alarm
+ spanning-tree link-type point-to-point
+ service-policy input CIP-PTP-Traffic
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+interface Vlan${VLAN}
+ ip address 192.168.1.100 255.255.255.0
+ cip enable
+!
+interface Vlan223
+ no ip address
+!
+ip default-gateway 192.168.1.1
+ip http server
+ip http authentication local
+ip http secure-server
+ip http tls-version TLSv1.2
+ip http session-idle-timeout 1200
+!
+access-list 101 permit udp any eq 2222 any dscp 55
+access-list 102 permit udp any eq 2222 any dscp 47
+access-list 103 permit udp any eq 2222 any dscp 43
+access-list 104 permit udp any eq 2222 any
+access-list 105 permit udp any eq 44818 any
+access-list 105 permit tcp any eq 44818 any
+access-list 106 permit udp any eq 319 any
+access-list 107 permit udp any eq 320 any
+snmp-server community SA307 RO
+snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart
+snmp-server enable traps transceiver all
+snmp-server enable traps call-home message-send-fail server-fail
+snmp-server enable traps tty
+snmp-server enable traps license
+snmp-server enable traps auth-framework sec-violation
+snmp-server enable traps cluster
+snmp-server enable traps config-copy
+snmp-server enable traps config
+snmp-server enable traps config-ctid
+snmp-server enable traps pki
+snmp-server enable traps trustsec-sxp conn-srcaddr-err msg-parse-err conn-config-err binding-err conn-up conn-down binding-expn-fail oper-nodeid-change binding-conflict
+snmp-server enable traps energywise
+snmp-server enable traps fru-ctrl
+snmp-server enable traps entity
+snmp-server enable traps event-manager
+snmp-server enable traps power-ethernet police
+snmp-server enable traps cpu threshold
+snmp-server enable traps rep
+snmp-server enable traps bridge newroot topologychange
+snmp-server enable traps stpx inconsistency root-inconsistency loop-inconsistency
+snmp-server enable traps syslog
+snmp-server enable traps vtp
+snmp-server enable traps vlancreate
+snmp-server enable traps vlandelete
+snmp-server enable traps flash insertion removal
+snmp-server enable traps port-security
+snmp-server enable traps envmon fan shutdown supply temperature status
+snmp-server enable traps bulkstat collection transfer
+snmp-server enable traps alarms informational
+snmp-server enable traps errdisable
+snmp-server enable traps mac-notification change move threshold
+snmp-server enable traps vlan-membership
+snmp mib flash cache
+!
+line con 0
+ logging synchronous
+ login local
+line vty 0 4
+ logging synchronous
+ login local
+ transport input all
+line vty 5 15
+ logging synchronous
+ login local
+ transport input all
+!
+!
+end
