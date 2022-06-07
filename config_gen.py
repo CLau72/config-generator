@@ -55,8 +55,6 @@ def generate_configs(template_file, inventory_file="inventory.json"):
         with open(f"./output/{station}.txt", "w") as f:
             output = template
             for parameter in parameters:
-                print(parameter)
-                print(values[parameter])
                 output = output.replace(parameter, values[parameter])
             f.write(output)
 
