@@ -20,7 +20,7 @@ def parse_parameters(template_file):
 
     try:
         with open(template_file, encoding='UTF-8') as f:
-            output = f.readlines()
+            template = f.readlines()
     except:
         print("Unable to open template file")
     else:
@@ -29,7 +29,7 @@ def parse_parameters(template_file):
 
         # FTNM templates surround parameters with {$parameter}
         # Loop through the template and gather each instance of this structure
-        for line in output:
+        for line in template:
             if re.search(r'\${.+}', line):
                 parameter_list.append(re.search(r'\${.+}', line).group(0))
 
@@ -39,10 +39,33 @@ def parse_parameters(template_file):
         return parameters
 
 
+def generate_configs(template_file, inventory_file="inventory.json"):
+    # Read in full file to get the template
+    with open(template_file, mode="r") as f:
+        template = f.read()
+    # Obtain parameters based on template file
+    parameters = parse_parameters(template_file)
+
+    # Read in station inventory
+    with open("inventory.json") as f:
+        inventory = json.load(f)
+
+    # For each station, replace all of the placeholder values with the actual values for that station based on inventory.json
+    for station, values in inventory.items():
+        with open(f"./output/{station}.txt", "w") as f:
+            output = template
+            for parameter in parameters:
+                print(parameter)
+                print(values[parameter])
+                output = output.replace(parameter, values[parameter])
+            f.write(output)
+
+
 def main():
 
     template_file = file_select()
-    print(parse_parameters(template_file))
+    generate_configs(template_file)
+
 
 if __name__  == "__main__":
     main()
